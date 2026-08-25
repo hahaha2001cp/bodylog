@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>BODY LOG</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="BODY LOG">
+<meta name="theme-color" content="#14202B">
+<style>
+:root{--ink:#14202B;--ink60:#5A6771;--paper:#F6F7F7;--card:#fff;--rule:#CDD3D8;--rule2:#E6EAED;
+--muscle:#1F6F5C;--fat:#BE3A2B;--warn:#BE3A2B;--ref:#8C97A0;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--paper);color:var(--ink);
+ font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;-webkit-font-smoothing:antialiased;
+ padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+#app{max-width:640px;margin:0 auto;padding:0 12px 48px}
+.mono,input,select,.stat-v,.deflist b,.exd{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
+
+header{padding:22px 2px 14px;border-bottom:2px solid var(--ink)}
+.hrow{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.eyebrow{font-size:10px;letter-spacing:.2em;color:var(--ink60);margin-bottom:4px}
+h1{margin:0;font-size:26px;letter-spacing:.16em;font-weight:600;font-family:ui-monospace,"SF Mono",Menlo,monospace}
+.hmeta{font-size:10px;color:var(--ink60);text-align:right;line-height:1.7}
+.hmeta b{font-family:ui-monospace,"SF Mono",Menlo,monospace;color:var(--ink)}
+
+.alarm{margin-top:12px;border:1px solid var(--warn);border-left:4px solid var(--warn);background:#FDF3F1;padding:12px 14px;font-size:12.5px;line-height:1.7}
+.alarm-t{font-weight:700;color:var(--warn);margin-bottom:4px}
+
+nav{display:flex;margin-top:14px;border-bottom:1px solid var(--rule)}
+nav button{flex:1;padding:12px 0;background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;
+ font-size:13px;color:var(--ink60);cursor:pointer;font-family:inherit}
+nav button.on{color:var(--ink);border-bottom-color:var(--ink);font-weight:700}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
+
+.pane{padding-top:14px;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--card);border:1px solid var(--rule);padding:14px}
+.card.muted{background:#FAFBFB}
+.ch{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding-bottom:9px;margin-bottom:12px;border-bottom:1px solid var(--rule2)}
+.ch h2{margin:0;font-size:13.5px;font-weight:700;letter-spacing:.04em}
+.tag{font-size:10.5px;color:var(--ink60);text-align:right;line-height:1.5}
+
+.slots{display:flex;gap:4px;flex-wrap:wrap}
+.slot{flex:1;min-width:44px;border:1px solid var(--rule);padding:7px 2px;text-align:center;font-size:9.5px;color:var(--ink60);background:#FBFCFC;font-family:ui-monospace,Menlo,monospace}
+.slot.done{background:var(--muscle);border-color:var(--muscle);color:#fff}
+.slot.cur{outline:2px solid var(--ink);outline-offset:1px}
+.schn{margin-top:10px;font-size:11.5px;color:var(--ink60)}
+.schn b{color:var(--warn);font-family:ui-monospace,Menlo,monospace;font-size:13px}
+
+label.fld{display:block;margin-bottom:10px}
+.fld-l{display:block;font-size:10.5px;color:var(--ink60);letter-spacing:.05em;margin-bottom:4px}
+.fld-l em{font-style:normal;margin-left:5px;opacity:.65}
+input,select{width:100%;padding:10px;border:1px solid var(--rule);background:#fff;font-size:16px;color:var(--ink);border-radius:0}
+input::placeholder{color:#A8B1B8;font-size:13px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+
+.calc{margin:2px 0 12px;padding:9px 11px;background:#F0F3F4;font-size:11.5px;color:var(--ink60);line-height:1.8}
+.calc.thin{background:#FDF3F1}
+.calc b{font-family:ui-monospace,Menlo,monospace;color:var(--ink);font-size:13px}
+.calc-w{color:var(--warn);font-size:10.5px;margin-top:3px}
+
+.exrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--rule2)}
+.exrow:last-of-type{border-bottom:0}
+.exl{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.exl b{font-size:12.5px}.exl span{font-size:10px;color:var(--ink60)}
+.exi{flex:none;display:flex;align-items:center;gap:4px;width:96px}
+.exi input{padding:8px;text-align:right}
+.exu{font-size:10px;color:var(--ink60)}
+.exd{flex:none;width:38px;text-align:right;font-size:14px;font-weight:600;color:var(--ink60)}
+.exset{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.exset input{flex:1}.exset select{width:74px}
+
+.primary{width:100%;padding:13px;background:var(--ink);color:#fff;border:0;font-size:13.5px;font-weight:700;letter-spacing:.05em;cursor:pointer;font-family:inherit}
+.primary.big{padding:17px;font-size:14.5px}
+.primary:active{opacity:.82}
+.ghost{width:100%;padding:11px;background:#fff;color:var(--ink);border:1px solid var(--rule);font-size:12.5px;cursor:pointer;font-family:inherit;margin-bottom:8px}
+
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--rule2);border:1px solid var(--rule2)}
+.stat{background:#fff;padding:10px 8px}
+.stat-l{font-size:9.5px;color:var(--ink60);margin-bottom:3px}
+.stat-v{font-size:19px;font-weight:600;line-height:1.15}
+.stat-v em{font-style:normal;font-size:10px;margin-left:2px;opacity:.6}
+.stat-s{font-size:9px;color:var(--ink60);margin-top:3px;line-height:1.4}
+
+svg.chart{width:100%;height:auto;display:block}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:10.5px;color:var(--ink60);margin-top:8px}
+.legend i{display:inline-block;width:14px;height:2px;vertical-align:middle;margin-right:5px}
+.note{font-size:11px;color:var(--ink60);line-height:1.75;margin:10px 0 0}
+.empty{padding:20px 4px;font-size:12px;color:var(--ink60);line-height:1.8;text-align:center}
+.empty-s{margin-top:8px;font-size:10.5px;opacity:.85}
+
+.row{display:flex;align-items:flex-start;gap:8px;padding:9px 0;border-bottom:1px solid var(--rule2)}
+.row:last-child{border-bottom:0}
+.rowb{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.rowb b{font-size:11px;font-family:ui-monospace,Menlo,monospace;color:var(--ink60)}
+.rowb .mono{font-size:11.5px;line-height:1.6;word-break:break-all}
+.rown{font-size:10px;color:var(--ink60)}
+.del{background:none;border:0;color:var(--warn);font-size:10.5px;cursor:pointer;padding:2px 4px;font-family:inherit;flex:none}
+
+.deflist div{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--rule2);font-size:12px}
+.deflist div:last-child{border-bottom:0}
+.deflist span{color:var(--ink60)}
+
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:var(--ink);color:#fff;padding:10px 18px;font-size:12px;max-width:88vw;z-index:50;display:none}
+footer{margin-top:18px;padding-top:12px;border-top:1px solid var(--rule2);font-size:10px;color:var(--ink60);line-height:1.8}
+@media(max-width:380px){.stats{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast"></div>
+
+<script>
+/* ============ 定数 ============ */
+var HEIGHT_CM=173, HEIGHT_M=1.73, SMM_FLOOR=31.3, MA_N=3, KEY='bodylog-v3';
+var COL={muscle:'#1F6F5C',fat:'#BE3A2B',ink:'#14202B',ref:'#8C97A0',rule:'#CDD3D8',rule2:'#E6EAED',ink60:'#5A6771',warn:'#BE3A2B'};
+
+var DEFAULT_EX=[
+ {id:'e1',name:'プッシュアップ',unit:'回'},
+ {id:'e2',name:'懸垂',unit:'回'},
+ {id:'e3',name:'スクワット',unit:'回'},
+ {id:'e4',name:'プランク',unit:'秒'}];
+
+var SEED={
+ inbody:[
+  {id:'s1',date:'2025-11-12',weight:64.4,smm:29.3,bf:18.4},
+  {id:'s2',date:'2026-01-29',weight:66.7,smm:30.5,bf:18.1},
+  {id:'s3',date:'2026-04-22',weight:69.4,smm:30.8,bf:21.0},
+  {id:'s4',date:'2026-08-21',weight:73.2,smm:31.3,bf:24.0},
+  {id:'s5',date:'2026-08-24',weight:73.7,smm:31.8,bf:23.2}],
+ circ:[{id:'b1',date:'2026-08-15',method:'bodygram',chest:97.5,waist:87.4,neck:36.3,thigh:55.3,arm:31.3,calf:34.8,hip:90.6,note:'3Dスキャン推定値／参考'}],
+ training:[],landmarks:{arm:'',thigh:'',memo:''},exercises:DEFAULT_EX};
+
+/* ============ ユーティリティ ============ */
+function uid(){return Math.random().toString(36).slice(2,9)}
+function today(){var d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)}
+function md(s){return s?s.slice(5).replace('-','/'):''}
+function days(a,b){return Math.round((new Date(b)-new Date(a))/864e5)}
+function fmt(v,d){d=d===undefined?1:d;return(v==null||isNaN(v))?'—':Number(v).toFixed(d)}
+function sgn(v,d){d=d===undefined?1:d;return v==null?'—':(v>0?'+':'')+Number(v).toFixed(d)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function fatMass(r){return r.weight*r.bf/100}
+function ffm(r){return r.weight-fatMass(r)}
+function adjFFMI(r){return ffm(r)/(HEIGHT_M*HEIGHT_M)+6.3*(1.8-HEIGHT_M)}
+function navyBF(w,n){if(!w||!n||w<=n)return null;var v=495/(1.0324-0.19077*Math.log10(w-n)+0.15456*Math.log10(HEIGHT_CM))-450;return(v>0&&v<60)?v:null}
+function movingAvg(a,k,n){return a.map(function(_,i){var s=a.slice(Math.max(0,i-n+1),i+1).map(function(x){return x[k]}).filter(function(x){return x!=null});return s.length?s.reduce(function(p,q){return p+q},0)/s.length:null})}
+function parseSamples(s){return String(s).split(/[\s,、]+/).map(parseFloat).filter(function(n){return!isNaN(n)&&n>30&&n<200})}
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(function(){t.style.display='none'},3000)}
+
+/* ============ 状態 ============ */
+var S, TAB='entry';
+function load(){try{var r=localStorage.getItem(KEY);S=r?JSON.parse(r):JSON.parse(JSON.stringify(SEED))}catch(e){S=JSON.parse(JSON.stringify(SEED))}
+ S.exercises=S.exercises&&S.exercises.length?S.exercises:DEFAULT_EX;
+ S.landmarks=S.landmarks||{arm:'',thigh:'',memo:''};}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('保存できませんでした。端末の空き容量を確認してください。')}}
+
+function inbody(){return S.inbody.slice().sort(function(a,b){return a.date<b.date?-1:1})}
+function tape(){return S.circ.filter(function(r){return r.method==='tape'}).sort(function(a,b){return a.date<b.date?-1:1})}
+function bodygram(){return S.circ.filter(function(r){return r.method==='bodygram'}).sort(function(a,b){return a.date<b.date?-1:1})}
+function training(){return S.training.slice().sort(function(a,b){return a.date>b.date?-1:1})}
+
+/* ============ SVG折れ線 ============ */
+function chart(data,series,opts){
+ opts=opts||{};
+ var W=600,H=opts.h||240,P={t:14,r:14,b:26,l:40};
+ if(!data.length)return '<div class="empty">データがありません。</div>';
+ var vals=[];series.forEach(function(s){data.forEach(function(d){if(d[s.k]!=null)vals.push(d[s.k])})});
+ if(opts.refLine!=null)vals.push(opts.refLine);
+ if(!vals.length)return '<div class="empty">データがありません。</div>';
+ var mn=Math.min.apply(null,vals),mx=Math.max.apply(null,vals);
+ var pad=(mx-mn)*0.15||1;mn-=pad;mx+=pad;
+ var n=data.length;
+ var x=function(i){return P.l+(n===1?(W-P.l-P.r)/2:i*(W-P.l-P.r)/(n-1))};
+ var y=function(v){return P.t+(mx-v)*(H-P.t-P.b)/(mx-mn)};
+ var o='<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(opts.label||'グラフ')+'">';
+ for(var g=0;g<5;g++){var gv=mn+(mx-mn)*g/4;
+  o+='<line x1="'+P.l+'" y1="'+y(gv).toFixed(1)+'" x2="'+(W-P.r)+'" y2="'+y(gv).toFixed(1)+'" stroke="'+COL.rule2+'"/>';
+  o+='<text x="'+(P.l-6)+'" y="'+(y(gv)+3.5).toFixed(1)+'" font-size="10" fill="'+COL.ink60+'" text-anchor="end">'+gv.toFixed(mx-mn<6?1:0)+'</text>';}
+ data.forEach(function(d,i){if(n<=8||i%Math.ceil(n/7)===0)
+  o+='<text x="'+x(i).toFixed(1)+'" y="'+(H-8)+'" font-size="10" fill="'+COL.ink60+'" text-anchor="middle">'+esc(d.d)+'</text>';});
+ if(opts.refLine!=null)o+='<line x1="'+P.l+'" y1="'+y(opts.refLine).toFixed(1)+'" x2="'+(W-P.r)+'" y2="'+y(opts.refLine).toFixed(1)+'" stroke="'+COL.warn+'" stroke-dasharray="5 4"/>';
+ series.forEach(function(s){
+  var pts=[],dots='';
+  data.forEach(function(d,i){if(d[s.k]!=null){pts.push(x(i).toFixed(1)+','+y(d[s.k]).toFixed(1));
+   if(!s.noDot)dots+='<circle cx="'+x(i).toFixed(1)+'" cy="'+y(d[s.k]).toFixed(1)+'" r="3.2" fill="'+s.c+'"/>'}});
+  if(pts.length)o+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+s.c+'" stroke-width="'+(s.w||2)+'" stroke-linejoin="round"/>'+dots;});
+ o+='</svg>';
+ o+='<div class="legend">'+series.map(function(s){return '<span><i style="background:'+s.c+'"></i>'+esc(s.n)+'</span>'}).join('')
+  +(opts.refLine!=null?'<span><i style="background:'+COL.warn+'"></i>管理下限 '+opts.refLine+'</span>':'')+'</div>';
+ return o;
+}
+
+/* ============ 判定 ============ */
+function judge(){
+ var ib=inbody(),smmMA=movingAvg(ib,'smm',MA_N),wMA=movingAvg(ib,'weight',MA_N);
+ var smmNow=smmMA.length?smmMA[smmMA.length-1]:null;
+ var pace=null;
+ if(ib.length>=2){var b=ib[ib.length-1],cand=ib.filter(function(r){var d=days(r.date,b.date);return d>=21&&d<=84});
+  if(cand.length){var p=cand[cand.length-1];pace=(b.weight-p.weight)/days(p.date,b.date)*30}}
+ return{ib:ib,smmMA:smmMA,wMA:wMA,smmNow:smmNow,pace:pace,
+  smmAlert:smmNow!=null&&smmNow<SMM_FLOOR, paceAlert:pace!=null&&pace<-0.8};
+}
+
+/* ============ 隔週点検表 ============ */
+function schedule(){
+ var tp=tape(),anchor=tp.length?tp[0].date:today(),now=new Date(today()),slots=[];
+ for(var k=0;k<400;k++){var s=new Date(anchor);s.setDate(s.getDate()+14*k);if(s>now)break;
+  var e=new Date(s);e.setDate(e.getDate()+13);
+  slots.push({s:s,e:e,done:tp.some(function(r){var x=new Date(r.date);return x>=s&&x<=e})});}
+ var view=slots.slice(-10),cur=slots[slots.length-1],streak=0;
+ for(var i=slots.length-1;i>=0;i--){if(i===slots.length-1&&!slots[i].done)continue;if(slots[i].done)streak++;else break}
+ var iso=function(d){return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
+ var left=cur?Math.max(0,days(today(),iso(cur.e))):0;
+ return '<section class="card"><div class="ch"><h2>隔週の計測</h2><span class="tag">'
+  +(tp.length?'連続 '+streak+' 期':'巻尺の初回計測から起算します')+'</span></div><div class="slots">'
+  +view.map(function(s,i){return '<div class="slot'+(s.done?' done':'')+(i===view.length-1?' cur':'')+'"><span>'+md(iso(s.s))+'</span></div>'}).join('')
+  +'</div><div class="schn">'+(cur&&!cur.done
+   ?'今期は未計測です。締切まで <b>'+left+'</b> 日。'
+   :'今期は計測済みです。次の計測は '+(cur?md(iso(new Date(cur.e.getTime()+864e5))):'—')+' から。')+'</div></section>';
+}
+
+/* ============ 入力タブ ============ */
+var F={date:today(),ws:'',smm:'',bf:'',c:{},tr:{}};
+function viewEntry(){
+ var ib=inbody(),tp=tape(),tr=training(),ex=S.exercises;
+ var prevIn=ib.length?ib[ib.length-1]:null, prevTp=tp.length?tp[tp.length-1]:null;
+ var sm=parseSamples(F.ws),avg=sm.length?sm.reduce(function(a,b){return a+b},0)/sm.length:null;
+ var cf=[['chest','胸囲',''],['waist','ウエスト','へそ経由'],['neck','首周り',''],['thigh','太もも',''],['arm','二の腕',''],['calf','ふくらはぎ',''],['hip','ヒップ','任意']];
+ var h=schedule();
+
+ h+='<section class="card"><div class="ch"><h2>計測日</h2><span class="tag">3区分すべて同じ日付で記録します</span></div>'
+  +'<input type="date" value="'+F.date+'" oninput="F.date=this.value"></section>';
+
+ h+='<section class="card"><div class="ch"><h2>① 体重・体組成</h2><span class="tag">体重は前回計測以降を全件<br>起床後・排尿後・空腹時</span></div>'
+  +'<label class="fld"><span class="fld-l">体重<em>前回計測日の翌日から今日まで・空白/改行/読点で区切る</em></span>'
+  +'<input inputmode="decimal" value="'+esc(F.ws)+'" placeholder="73.2 72.8 73.5 73.0 72.6 73.1 72.9 73.4 73.0 72.7 73.3 72.9 73.1 72.8" oninput="F.ws=this.value;updW()"></label>'
+  +'<div id="wcalc">'+wcalcHTML()+'</div>';
+ h+='<div class="grid2">'
+  +'<label class="fld"><span class="fld-l">骨格筋量<em>kg</em></span><input type="number" inputmode="decimal" step="0.1" value="'+esc(F.smm)+'" placeholder="'+(prevIn?'前回 '+prevIn.smm:'')+'" oninput="F.smm=this.value"></label>'
+  +'<label class="fld"><span class="fld-l">体脂肪率<em>%</em></span><input type="number" inputmode="decimal" step="0.1" value="'+esc(F.bf)+'" placeholder="'+(prevIn?'前回 '+prevIn.bf:'')+'" oninput="F.bf=this.value"></label></div>'
+  +'<p class="note">体重はInBodyアプリの履歴を見ながら、前回計測日の翌日から今日までを全件入力してください。14日ぶんの平均にすると、7日ぶんに比べて日々のブレが約3割小さくなります。骨格筋量と体脂肪率は計測日当日の1回分で構いません。</p></section>';
+
+ h+='<section class="card"><div class="ch"><h2>② 周径（巻尺実測）</h2><span class="tag">呼気の終わり／右側<br>基準点は設定タブ</span></div><div class="grid2">'
+  +cf.map(function(f){return '<label class="fld"><span class="fld-l">'+f[1]+'<em>cm</em></span><input type="number" inputmode="decimal" step="0.1" value="'+esc(F.c[f[0]]||'')+'" placeholder="'+(prevTp&&prevTp[f[0]]!=null?'前回 '+prevTp[f[0]]:f[2])+'" oninput="F.c[\''+f[0]+'\']=this.value;updC()"></label>'}).join('')
+  +'</div><label class="fld"><span class="fld-l">メモ</span><input value="'+esc(F.c.note||'')+'" placeholder="測定条件など" oninput="F.c.note=this.value"></label>'
+  +'<div id="ccalc">'+ccalcHTML()+'</div>';
+ h+='<p class="note">前回比はあえて出していません。隔週の実変化は巻尺の誤差より小さいため、傾きだけで判断します。</p></section>';
+
+ h+='<section class="card"><div class="ch"><h2>③ トレーニング</h2><span class="tag">条件を揃えた最大回数<br>同じ曜日・同じ時刻・疲労前</span></div>';
+ ex.forEach(function(e){
+  var p=null;for(var i=0;i<tr.length;i++){if(tr[i].exercise===e.name){p=tr[i];break}}
+  var v=F.tr[e.id],diff=(p&&v!==undefined&&v!=='')?(+v-p.value):null;
+  h+='<div class="exrow"><div class="exl"><b>'+esc(e.name)+'</b><span>'+(p?'前回 '+p.value+e.unit+'（'+md(p.date)+'）':'初回')+'</span></div>'
+   +'<div class="exi"><input type="number" inputmode="numeric" step="1" value="'+esc(v||'')+'" oninput="F.tr[\''+e.id+'\']=this.value;updEx()"><span class="exu">'+esc(e.unit)+'</span></div>'
+   +'<div class="exd" id="exd-'+e.id+'" style="color:'+(diff==null?COL.ink60:(diff>=0?COL.muscle:COL.warn))+'">'+(diff==null?'—':sgn(diff,0))+'</div></div>';});
+ h+='<p class="note">減量中でも回数が落ちていなければ、筋肉は守れています。ここが2回続けて明確に下がったら、体組成より先に出る警告と見てください。</p></section>';
+
+ h+='<button class="primary big" onclick="saveAll()">この計測日の記録をまとめて保存する</button>';
+ return h;
+}
+
+function wcalcHTML(){
+ var sm=parseSamples(F.ws);if(!sm.length)return '';
+ var avg=sm.reduce(function(a,b){return a+b},0)/sm.length;
+ var ib=inbody(),prev=ib.length?ib[ib.length-1]:null;
+ return '<div class="calc'+(sm.length<10?' thin':'')+'">'+sm.length+' 件の平均 <b>'+fmt(avg,2)+'</b> kg'
+  +(prev?' ／ 前回比 <b>'+sgn(avg-prev.weight,2)+'</b> kg':'')
+  +(sm.length<10?'<div class="calc-w">'+(sm.length<5?'5件未満では日々のブレを吸収できません。':'もう少し入ると精度が上がります。')+'前回計測日の翌日から今日までを、抜けなく入れてください（14件が理想）。</div>':'')+'</div>';}
+function ccalcHTML(){
+ if(!F.c.waist||!F.c.neck)return '';
+ return '<div class="calc">推定体脂肪率（米海軍式）<b>'+fmt(navyBF(+F.c.waist,+F.c.neck))+'</b> %'
+  +(F.c.chest?' ／ 胸囲−ウエスト <b>'+fmt(+F.c.chest-+F.c.waist)+'</b> cm':'')+'</div>';}
+function updW(){var el=document.getElementById('wcalc');if(el)el.innerHTML=wcalcHTML()}
+function updC(){var el=document.getElementById('ccalc');if(el)el.innerHTML=ccalcHTML()}
+function updEx(){var tr=training();
+ S.exercises.forEach(function(e){
+  var el=document.getElementById('exd-'+e.id);if(!el)return;
+  var p=null;for(var i=0;i<tr.length;i++){if(tr[i].exercise===e.name){p=tr[i];break}}
+  var v=F.tr[e.id],d=(p&&v!==undefined&&v!=='')?(+v-p.value):null;
+  el.textContent=(d==null?'—':sgn(d,0));
+  el.style.color=(d==null?COL.ink60:(d>=0?COL.muscle:COL.warn));});}
+
+function saveAll(){
+ var n=0,sm=parseSamples(F.ws),avg=sm.length?sm.reduce(function(a,b){return a+b},0)/sm.length:null;
+ if(avg!=null&&F.smm!==''&&F.bf!==''){S.inbody.push({id:uid(),date:F.date,weight:+avg.toFixed(2),smm:+F.smm,bf:+F.bf,samples:sm.length});n++}
+ else if(avg!=null||F.smm!==''||F.bf!==''){return toast('体組成は 体重・骨格筋量・体脂肪率の3つが揃うと保存できます。')}
+
+ var req=['chest','waist','neck','thigh','arm','calf'];
+ var filled=req.filter(function(k){return F.c[k]!==undefined&&F.c[k]!==''});
+ if(filled.length===req.length){var rec={id:uid(),method:'tape',date:F.date,note:F.c.note||''};
+  req.concat(['hip']).forEach(function(k){if(F.c[k]!==undefined&&F.c[k]!=='')rec[k]=parseFloat(F.c[k])});
+  S.circ.push(rec);n++}
+ else if(filled.length){return toast('周径は6項目すべてが揃うと保存できます。ヒップのみ任意です。')}
+
+ S.exercises.forEach(function(e){var v=F.tr[e.id];
+  if(v!==undefined&&v!==''){S.training.push({id:uid(),date:F.date,exercise:e.name,value:+v,unit:e.unit});n++}});
+
+ if(!n)return toast('入力された項目がありません。');
+ save();F={date:today(),ws:'',smm:'',bf:'',c:{},tr:{}};render();toast(n+' 件を記録しました。');
+}
+
+/* ============ 推移タブ ============ */
+function viewTrend(){
+ var j=judge(),ib=j.ib,tp=tape(),bg=bodygram(),tr=training(),ex=S.exercises;
+ var latest=ib.length?ib[ib.length-1]:null, lt=tp.length?tp[tp.length-1]:null, ref=bg.length?bg[bg.length-1]:null;
+ var comp=ib.map(function(r,i){return{d:md(r.date),smm:r.smm,fat:+fatMass(r).toFixed(2),w:r.weight,ma:j.wMA[i]?+j.wMA[i].toFixed(2):null}});
+ var h='';
+
+ if(latest){
+  h+='<section class="card"><div class="ch"><h2>直近の値</h2><span class="tag">'+latest.date+'</span></div><div class="stats">'
+   +st('体重',fmt(latest.weight,2),'kg',null,latest.samples?latest.samples+'日平均':'')
+   +st('骨格筋量',fmt(latest.smm),'kg',latest.smm<SMM_FLOOR?COL.warn:COL.muscle,'')
+   +st('体脂肪量',fmt(fatMass(latest),2),'kg',COL.fat,'')
+   +st('体脂肪率',fmt(latest.bf),'%',null,'')
+   +st('除脂肪',fmt(ffm(latest),2),'kg',null,'')
+   +st('補正FFMI',fmt(adjFFMI(latest),2),'',null,'')+'</div>';
+  if(j.pace!=null)h+='<div class="calc" style="margin-top:12px">直近のペース <b>'+sgn(j.pace,2)+'</b> kg/月（減量時の上限 −0.8kg/月）</div>';
+  h+='</section>';}
+
+ if(lt){h+='<section class="card"><div class="ch"><h2>周径から導く値</h2><span class="tag">巻尺実測 '+lt.date+'</span></div><div class="stats">'
+  +st('胸囲−ウエスト',fmt((lt.chest||0)-(lt.waist||0)),'cm',null,'増えれば前進')
+  +st('ウエスト身長比',fmt(lt.waist/HEIGHT_CM,3),'',null,'0.5未満が目安')
+  +(lt.hip!=null?st('ウエストヒップ比',fmt(lt.waist/lt.hip,2),'',null,''):'')
+  +st('推定体脂肪率',fmt(navyBF(lt.waist,lt.neck)),'%',null,'米海軍式／誤差±3〜4%')+'</div></section>';}
+
+ h+='<section class="card"><div class="ch"><h2>骨格筋量と体脂肪量</h2><span class="tag">破線が管理下限 '+SMM_FLOOR+'kg</span></div>'
+  +chart(comp,[{k:'smm',n:'骨格筋量',c:COL.muscle},{k:'fat',n:'体脂肪量',c:COL.fat}],{refLine:SMM_FLOOR,h:250,label:'骨格筋量と体脂肪量の推移'})
+  +'<p class="note">2本の線の間隔が広がるほど、脂肪が優位に増えています。</p></section>';
+
+ h+='<section class="card"><div class="ch"><h2>体重</h2><span class="tag">細線＝期間平均<br>太線＝'+MA_N+'回移動平均</span></div>'
+  +chart(comp,[{k:'w',n:'期間平均',c:COL.ref,w:1.2},{k:'ma',n:MA_N+'回移動平均',c:COL.ink,w:2.4,noDot:true}],{h:210,label:'体重の推移'})+'</section>';
+
+ var dts=[];tr.forEach(function(r){if(dts.indexOf(r.date)<0)dts.push(r.date)});dts.sort();
+ var td=dts.map(function(dt){var o={d:md(dt)};ex.forEach(function(e){var f=tr.filter(function(r){return r.date===dt&&r.exercise===e.name})[0];if(f)o['x'+e.id]=f.value});return o});
+ h+='<section class="card"><div class="ch"><h2>トレーニング</h2><span class="tag">最も早く動く指標</span></div>'
+  +(td.length?chart(td,ex.map(function(e,i){return{k:'x'+e.id,n:e.name,c:[COL.muscle,COL.ink,COL.ref,COL.fat,'#7A5EA8','#B07A1E'][i%6]}}),{h:220,label:'トレーニング記録の推移'})
+   :'<div class="empty">まだ記録がありません。入力タブの③から登録してください。</div>')+'</section>';
+
+ var tpd=tp.map(function(r){return{d:md(r.date),diff:(r.chest!=null&&r.waist!=null)?+(r.chest-r.waist).toFixed(1):null}});
+ h+='<section class="card"><div class="ch"><h2>胸囲 − ウエスト</h2><span class="tag">巻尺実測のみ</span></div>'
+  +(tpd.length?chart(tpd,[{k:'diff',n:'胸囲−ウエスト',c:COL.muscle}],{h:200,label:'胸囲とウエストの差の推移'})
+   :'<div class="empty">巻尺の実測はまだありません。入力タブの②から初回を登録すると、ここに推移が出ます。'
+    +(ref?'<div class="empty-s">参考：Bodygram 3D推定（'+ref.date+'）胸囲 '+ref.chest+' ／ ウエスト '+ref.waist+' cm。推定値のため実測とは別扱いです。</div>':'')+'</div>')+'</section>';
+ return h;
+}
+function st(l,v,u,c,s){return '<div class="stat"><div class="stat-l">'+esc(l)+'</div><div class="stat-v"'+(c?' style="color:'+c+'"':'')+'>'+v+'<em>'+u+'</em></div>'+(s?'<div class="stat-s">'+esc(s)+'</div>':'')+'</div>'}
+
+/* ============ 一覧タブ ============ */
+function viewList(){
+ var ib=inbody(),tp=tape(),bg=bodygram(),tr=training();
+ var h='<button class="ghost" onclick="expCSV()">CSV を書き出す</button>'
+  +'<button class="ghost" onclick="expJSON()">バックアップを書き出す（JSON）</button>'
+  +'<label class="ghost" style="display:block;text-align:center;cursor:pointer">バックアップを読み込む<input type="file" accept=".json" style="display:none" onchange="impJSON(this)"></label>';
+
+ h+='<section class="card"><div class="ch"><h2>周径（巻尺実測）</h2><span class="tag">'+tp.length+' 件</span></div>'
+  +(tp.length?tp.slice().reverse().map(function(r){return row(r.date,
+    '胸 '+fmt(r.chest)+' ／ 腹 '+fmt(r.waist)+' ／ 首 '+fmt(r.neck)+' ／ 腿 '+fmt(r.thigh)+' ／ 腕 '+fmt(r.arm)+' ／ 脹 '+fmt(r.calf),r.note,'circ',r.id)}).join('')
+   :'<div class="empty">まだ記録がありません。</div>')+'</section>';
+
+ if(bg.length)h+='<section class="card muted"><div class="ch"><h2>周径（3D推定・参考）</h2></div>'
+  +bg.slice().reverse().map(function(r){return row(r.date,'胸 '+fmt(r.chest)+' ／ 腹 '+fmt(r.waist)+' ／ 首 '+fmt(r.neck)+' ／ 腿 '+fmt(r.thigh),'実測とは別系列。グラフには含めません。','circ',r.id)}).join('')+'</section>';
+
+ h+='<section class="card"><div class="ch"><h2>体重・体組成</h2><span class="tag">'+ib.length+' 件</span></div>'
+  +ib.slice().reverse().map(function(r){return row(r.date+(r.samples?'　'+r.samples+'日平均':''),
+    fmt(r.weight,2)+'kg ／ 筋 '+fmt(r.smm)+'kg ／ 脂 '+fmt(r.bf)+'% ／ 脂肪量 '+fmt(fatMass(r),2)+'kg','','inbody',r.id)}).join('')+'</section>';
+
+ h+='<section class="card"><div class="ch"><h2>トレーニング</h2><span class="tag">'+tr.length+' 件</span></div>'
+  +(tr.length?tr.slice(0,80).map(function(r){return row(r.date,esc(r.exercise)+'　'+r.value+r.unit,'','training',r.id)}).join('')
+   :'<div class="empty">まだ記録がありません。</div>')+'</section>';
+ return h;
+}
+function row(t,m,n,kind,id){return '<div class="row"><div class="rowb"><b>'+esc(t)+'</b><span class="mono">'+m+'</span>'
+ +(n?'<span class="rown">'+esc(n)+'</span>':'')+'</div><button class="del" onclick="del(\''+kind+'\',\''+id+'\')">削除</button></div>'}
+function del(kind,id){if(!confirm('この記録を削除します。元に戻せません。'))return;
+ S[kind]=S[kind].filter(function(r){return r.id!==id});save();render();toast('削除しました。')}
+
+function dl(name,content,type){var b=new Blob([content],{type:type});var a=document.createElement('a');
+ a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();
+ setTimeout(function(){URL.revokeObjectURL(a.href)},1000)}
+function expCSV(){
+ var rows=[['種別','日付','項目','値']];
+ inbody().forEach(function(r){[['体重',r.weight],['骨格筋量',r.smm],['体脂肪率',r.bf],['体脂肪量',fatMass(r).toFixed(2)],['除脂肪',ffm(r).toFixed(2)]]
+  .forEach(function(p){rows.push(['体組成',r.date,p[0],p[1]])})});
+ tape().concat(bodygram()).forEach(function(r){var lb=r.method==='tape'?'周径(巻尺)':'周径(3D推定)';
+  [['胸囲','chest'],['ウエスト','waist'],['首周り','neck'],['太もも','thigh'],['二の腕','arm'],['ふくらはぎ','calf'],['ヒップ','hip']]
+   .forEach(function(p){if(r[p[1]]!=null)rows.push([lb,r.date,p[0],r[p[1]]])})});
+ training().forEach(function(r){rows.push(['トレーニング',r.date,r.exercise,r.value+r.unit])});
+ dl('body-log_'+today()+'.csv','\ufeff'+rows.map(function(r){return r.join(',')}).join('\n'),'text/csv');
+ toast('CSV を書き出しました。');}
+function expJSON(){dl('body-log-backup_'+today()+'.json',JSON.stringify(S,null,1),'application/json');toast('バックアップを書き出しました。');}
+function impJSON(el){var f=el.files[0];if(!f)return;var r=new FileReader();
+ r.onload=function(){try{var o=JSON.parse(r.result);
+  if(!o.inbody||!o.circ)throw 0;
+  if(!confirm('現在の記録を、読み込むファイルの内容で置き換えます。よろしいですか。'))return;
+  S=o;S.exercises=S.exercises&&S.exercises.length?S.exercises:DEFAULT_EX;S.landmarks=S.landmarks||{arm:'',thigh:'',memo:''};
+  save();render();toast('バックアップを読み込みました。')}catch(e){toast('読み込めませんでした。このアプリで書き出したJSONファイルを選んでください。')}};
+ r.readAsText(f);el.value='';}
+
+/* ============ 設定タブ ============ */
+var L=null,EX=null;
+function viewSet(){
+ if(!L)L=JSON.parse(JSON.stringify(S.landmarks));
+ if(!EX)EX=JSON.parse(JSON.stringify(S.exercises));
+ var h='<section class="card"><div class="ch"><h2>計測の基準点</h2><span class="tag">ここが崩れると比較できません</span></div>'
+  +'<label class="fld"><span class="fld-l">二の腕</span><input value="'+esc(L.arm)+'" placeholder="肘から○cm上" oninput="L.arm=this.value"></label>'
+  +'<label class="fld"><span class="fld-l">太もも</span><input value="'+esc(L.thigh)+'" placeholder="膝蓋骨上端から○cm上" oninput="L.thigh=this.value"></label>'
+  +'<label class="fld"><span class="fld-l">その他</span><input value="'+esc(L.memo)+'" placeholder="巻尺の種類、姿勢、計測する曜日と時刻" oninput="L.memo=this.value"></label>'
+  +'<button class="primary" onclick="S.landmarks=JSON.parse(JSON.stringify(L));save();toast(\'基準点を保存しました。\')">基準点を保存する</button></section>';
+
+ h+='<section class="card"><div class="ch"><h2>トレーニング種目</h2><span class="tag">最大6種目</span></div>';
+ EX.forEach(function(e,i){h+='<div class="exset"><input value="'+esc(e.name)+'" placeholder="種目名" oninput="EX['+i+'].name=this.value">'
+  +'<select onchange="EX['+i+'].unit=this.value">'+['回','秒','kg'].map(function(u){return '<option'+(e.unit===u?' selected':'')+'>'+u+'</option>'}).join('')+'</select>'
+  +'<button class="del" onclick="EX.splice('+i+',1);render()">削除</button></div>'});
+ if(EX.length<6)h+='<button class="ghost" onclick="EX.push({id:uid(),name:\'\',unit:\'回\'});render()">種目を追加する</button>';
+ h+='<button class="primary" onclick="S.exercises=EX.filter(function(e){return e.name.trim()});save();EX=null;render();toast(\'種目を保存しました。\')">種目を保存する</button>'
+  +'<p class="note">下半身の種目を1つ以上入れてください。太もも・ふくらはぎの周径が減少傾向にあります。</p></section>';
+
+ h+='<section class="card"><div class="ch"><h2>判定に使っている値</h2></div><div class="deflist">'
+  +'<div><span>骨格筋量の管理下限</span><b>'+SMM_FLOOR+' kg</b></div>'
+  +'<div><span>減量ペースの上限</span><b>0.8 kg/月</b></div>'
+  +'<div><span>移動平均</span><b>直近'+MA_N+'回（約6週）</b></div>'
+  +'<div><span>身長</span><b>'+HEIGHT_CM+' cm</b></div></div>'
+  +'<p class="note">管理下限は 2026/08/21 の骨格筋量 31.3kg が基準です。減量を進めても、この値を割らないことが条件になります。</p></section>';
+
+ h+='<section class="card"><div class="ch"><h2>データの保管場所</h2></div>'
+  +'<p class="note" style="margin:0">記録はこの端末の中だけに保存されます。サーバーには送信されません。'
+  +'端末の初期化やブラウザのデータ削除で消えるため、月1回、一覧タブからバックアップを書き出して保管してください。</p></section>';
+ return h;
+}
+
+/* ============ 描画 ============ */
+function render(){
+ var j=judge();
+ var h='<header><div class="hrow"><div><div class="eyebrow">身体計測記録票 ／ 隔週</div><h1>BODY LOG</h1></div>'
+  +'<div class="hmeta"><div>身長 <b>'+HEIGHT_CM+'</b> cm</div><div>骨格筋量 下限 <b>'+SMM_FLOOR+'</b> kg</div></div></div></header>';
+ if(j.smmAlert||j.paceAlert){h+='<div class="alarm"><div class="alarm-t">■ 管理限界を外れています</div>'
+  +(j.smmAlert?'<div>骨格筋量の'+MA_N+'回移動平均が '+fmt(j.smmNow,2)+'kg（下限 '+SMM_FLOOR+'kg）。減量を一時停止し、摂取量を維持水準に戻してください。</div>':'')
+  +(j.paceAlert?'<div>直近の減量ペースが月 '+fmt(j.pace,2)+'kg。上限の月0.8kgを超えています。削減幅を緩めてください。</div>':'')+'</div>'}
+ h+='<nav>'+[['entry','入力'],['trend','推移'],['list','一覧'],['set','設定']].map(function(t){
+  return '<button class="'+(TAB===t[0]?'on':'')+'" onclick="TAB=\''+t[0]+'\';render();window.scrollTo(0,0)">'+t[1]+'</button>'}).join('')+'</nav>';
+ h+='<div class="pane">'+(TAB==='entry'?viewEntry():TAB==='trend'?viewTrend():TAB==='list'?viewList():viewSet())+'</div>';
+ h+='<footer>計測値の記録・集計を行うツールです。診断や治療方針の判断には使用せず、担当医の指示を優先してください。</footer>';
+ document.getElementById('app').innerHTML=h;
+}
+load();render();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
+if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(function(){});
+</script>
+</body>
+</html>
