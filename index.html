@@ -104,6 +104,17 @@ svg.chart{width:100%;height:auto;display:block}
 .deflist div:last-child{border-bottom:0}
 .deflist span{color:var(--ink60)}
 
+.phgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.phslot{position:relative;display:flex;flex-direction:column;gap:6px}
+.phbox{aspect-ratio:3/4;border:1px dashed var(--rule);background:#FBFCFC;display:flex;align-items:center;justify-content:center;
+ font-size:11px;color:var(--ink60);cursor:pointer;overflow:hidden;text-align:center;line-height:1.6}
+.phbox img,.phcmp img{width:100%;height:100%;object-fit:contain;display:block}
+.phbox.has{border-style:solid}
+.phl{font-size:10.5px;color:var(--ink60);letter-spacing:.05em;display:flex;justify-content:space-between;align-items:center}
+.phsel{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.phrow{margin-bottom:12px}
+.phrow:last-child{margin-bottom:0}
+.phcmp{aspect-ratio:3/4;border:1px solid var(--rule2);background:#FBFCFC;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--ink60);overflow:hidden}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:var(--ink);color:#fff;padding:10px 18px;font-size:12px;max-width:88vw;z-index:50;display:none}
 footer{margin-top:18px;padding-top:12px;border-top:1px solid var(--rule2);font-size:10px;color:var(--ink60);line-height:1.8}
 @media(max-width:380px){.stats{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}}
@@ -157,6 +168,43 @@ function load(){try{var r=localStorage.getItem(KEY);S=r?JSON.parse(r):JSON.parse
  S.exercises=S.exercises&&S.exercises.length?S.exercises:DEFAULT_EX;
  S.landmarks=S.landmarks||{arm:'',thigh:'',memo:''};}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('保存できませんでした。端末の空き容量を確認してください。')}}
+
+/* ============ 写真（IndexedDB） ============
+   写真は容量が大きいため localStorage ではなく IndexedDB に保存する。
+   キーは「日付_向き」（例 2026-10-25_front）。 */
+var PH_VIEWS=[['front','正面'],['side','横']], PH_MAX=1200, PH_Q=0.82;
+var PHK=[], PHDB=null;
+function phOpen(){return new Promise(function(ok,ng){
+ if(PHDB)return ok(PHDB);
+ var r=indexedDB.open('bodylog-photos',1);
+ r.onupgradeneeded=function(){r.result.createObjectStore('photos')};
+ r.onsuccess=function(){PHDB=r.result;ok(PHDB)};r.onerror=function(){ng(r.error)}})}
+function phTx(mode,fn){return phOpen().then(function(db){return new Promise(function(ok,ng){
+ var t=db.transaction('photos',mode),st=t.objectStore('photos'),res=fn(st);
+ t.oncomplete=function(){ok(res&&res.result!==undefined?res.result:undefined)};t.onerror=function(){ng(t.error)}})})}
+function phKeys(){return phTx('readonly',function(st){return st.getAllKeys()}).then(function(k){PHK=(k||[]).slice().sort();return PHK})}
+function phGet(k){return phTx('readonly',function(st){return st.get(k)})}
+function phPut(k,blob){return phTx('readwrite',function(st){st.put(blob,k)})}
+function phDel(k){return phTx('readwrite',function(st){st.delete(k)})}
+function phClear(){return phTx('readwrite',function(st){st.clear()})}
+function phDates(){var d=[];PHK.forEach(function(k){var s=k.slice(0,10);if(d.indexOf(s)<0)d.push(s)});return d.sort()}
+/* 長辺 PH_MAX px の JPEG に縮小する。HEIC など Chrome で開けない形式は失敗にする */
+function phShrink(file){return new Promise(function(ok,ng){
+ var u=URL.createObjectURL(file),im=new Image();
+ im.onload=function(){var s=Math.min(1,PH_MAX/Math.max(im.naturalWidth,im.naturalHeight));
+  var c=document.createElement('canvas');c.width=Math.round(im.naturalWidth*s);c.height=Math.round(im.naturalHeight*s);
+  c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);
+  c.toBlob(function(b){b?ok(b):ng()},'image/jpeg',PH_Q)};
+ im.onerror=function(){URL.revokeObjectURL(u);ng()};im.src=u})}
+/* 描画後、data-ph 属性のある img に写真を流し込む */
+var PHURL={};
+function phFill(){document.querySelectorAll('img[data-ph]').forEach(function(el){
+ var k=el.getAttribute('data-ph');
+ if(PHURL[k]){el.src=PHURL[k];return}
+ phGet(k).then(function(b){if(b){PHURL[k]=URL.createObjectURL(b);el.src=PHURL[k]}})})}
+function phForget(k){if(PHURL[k]){URL.revokeObjectURL(PHURL[k]);delete PHURL[k]}}
+function b2d(b){return new Promise(function(ok){var r=new FileReader();r.onload=function(){ok(r.result)};r.readAsDataURL(b)})}
+function d2b(d){return fetch(d).then(function(r){return r.blob()})}
 
 function inbody(){return S.inbody.slice().sort(function(a,b){return a.date<b.date?-1:1})}
 function tape(){return S.circ.filter(function(r){return r.method==='tape'}).sort(function(a,b){return a.date<b.date?-1:1})}
@@ -233,7 +281,7 @@ function viewEntry(){
  var h=schedule();
 
  h+='<section class="card"><div class="ch"><h2>計測日</h2><span class="tag">3区分すべて同じ日付で記録します</span></div>'
-  +'<input type="date" value="'+F.date+'" oninput="F.date=this.value"></section>';
+  +'<input type="date" value="'+F.date+'" oninput="F.date=this.value;updPh()"></section>';
 
  h+='<section class="card"><div class="ch"><h2>① 体重・体組成</h2><span class="tag">体重は前回計測以降を全件<br>起床後・排尿後・空腹時</span></div>'
   +'<label class="fld"><span class="fld-l">体重<em>前回計測日の翌日から今日まで・空白/改行/読点で区切る</em></span>'
@@ -259,9 +307,36 @@ function viewEntry(){
    +'<div class="exd" id="exd-'+e.id+'" style="color:'+(diff==null?COL.ink60:(diff>=0?COL.muscle:COL.warn))+'">'+(diff==null?'—':sgn(diff,0))+'</div></div>';});
  h+='<p class="note">減量中でも回数が落ちていなければ、筋肉は守れています。ここが2回続けて明確に下がったら、体組成より先に出る警告と見てください。</p></section>';
 
+ h+='<section class="card"><div class="ch"><h2>④ 上半身の写真</h2><span class="tag">iPhoneで撮影<br>同じ場所・同じ照明・同じ距離</span></div>'
+  +'<div id="phcard">'+phCardHTML()+'</div>'
+  +'<p class="note">写真は選んだ時点で、上の計測日の日付で保存されます（下の保存ボタンは不要）。立ち位置・カメラの高さ・照明を毎回揃えると、変化が見分けやすくなります。'
+  +'iPhoneからはAirDropでこのMacに送ってください。</p></section>';
+
  h+='<button class="primary big" onclick="saveAll()">この計測日の記録をまとめて保存する</button>';
  return h;
 }
+
+function phCardHTML(){
+ return '<div class="phgrid">'+PH_VIEWS.map(function(v){
+  var k=F.date+'_'+v[0],has=PHK.indexOf(k)>=0;
+  return '<div class="phslot"><div class="phl"><span>'+v[1]+'</span>'
+   +(has?'<button class="del" onclick="phRemove(\''+k+'\')">削除</button>':'')+'</div>'
+   +'<label class="phbox'+(has?' has':'')+'">'
+   +(has?'<img data-ph="'+k+'" alt="'+F.date+' '+v[1]+'">':'写真を選ぶ<br>（JPEG / PNG）')
+   +'<input type="file" accept="image/*" style="display:none" onchange="phPick(this,\''+v[0]+'\')"></label></div>'}).join('')+'</div>';}
+function updPh(){var el=document.getElementById('phcard');if(el){el.innerHTML=phCardHTML();phFill()}}
+function phPick(el,view){
+ var f=el.files[0];el.value='';if(!f)return;
+ if(!F.date)return toast('先に計測日を入れてください。');
+ var k=F.date+'_'+view;
+ if(PHK.indexOf(k)>=0&&!confirm('この日の写真は既にあります。新しい写真に置き換えますか。'))return;
+ phShrink(f).then(function(b){return phPut(k,b)}).then(function(){phForget(k);return phKeys()})
+  .then(function(){updPh();toast('写真を保存しました。')})
+  .catch(function(){toast(/\.hei[cf]$/i.test(f.name)||/hei[cf]/i.test(f.type)
+   ?'HEIC形式の写真はChromeで開けません。設定タブの「写真の形式」を参照し、JPEGにしてから選んでください。'
+   :'写真を読み込めませんでした。JPEGかPNGの写真を選んでください。')});}
+function phRemove(k){if(!confirm('この写真を削除します。元に戻せません。'))return;
+ phDel(k).then(function(){phForget(k);return phKeys()}).then(function(){render();toast('写真を削除しました。')})}
 
 function wcalcHTML(){
  var sm=parseSamples(F.ws);if(!sm.length)return '';
@@ -345,7 +420,27 @@ function viewTrend(){
   +(tpd.length?chart(tpd,[{k:'diff',n:'胸囲−ウエスト',c:COL.muscle}],{h:200,label:'胸囲とウエストの差の推移'})
    :'<div class="empty">巻尺の実測はまだありません。入力タブの②から初回を登録すると、ここに推移が出ます。'
     +(ref?'<div class="empty-s">参考：Bodygram 3D推定（'+ref.date+'）胸囲 '+ref.chest+' ／ ウエスト '+ref.waist+' cm。推定値のため実測とは別扱いです。</div>':'')+'</div>')+'</section>';
+ h+=phCompare();
  return h;
+}
+
+/* 写真の比較：日付を2つ選び、同じ向きを左右に並べる。初期値は最初と最新 */
+var PA=null,PB=null;
+function phCompare(){
+ var ds=phDates();
+ var h='<section class="card"><div class="ch"><h2>上半身の写真</h2><span class="tag">'+ds.length+' 日分</span></div>';
+ if(!ds.length)return h+'<div class="empty">まだ写真がありません。入力タブの④から登録してください。</div></section>';
+ if(ds.indexOf(PA)<0)PA=ds[0];
+ if(ds.indexOf(PB)<0)PB=ds[ds.length-1];
+ var opt=function(sel){return ds.map(function(d){return '<option value="'+d+'"'+(d===sel?' selected':'')+'>'+d+'</option>'}).join('')};
+ h+='<div class="phsel"><select onchange="PA=this.value;render()" aria-label="左の日付">'+opt(PA)+'</select>'
+  +'<select onchange="PB=this.value;render()" aria-label="右の日付">'+opt(PB)+'</select></div>';
+ PH_VIEWS.forEach(function(v){
+  h+='<div class="phrow"><div class="phl" style="margin-bottom:6px"><span>'+v[1]+'</span></div><div class="phgrid">'
+   +[PA,PB].map(function(d){var k=d+'_'+v[0];
+    return '<div class="phcmp">'+(PHK.indexOf(k)>=0?'<img data-ph="'+k+'" alt="'+d+' '+v[1]+'">':'写真なし')+'</div>'}).join('')+'</div></div>'});
+ if(PA&&PB&&PA!==PB)h+='<p class="note">'+PA+' → '+PB+'（'+days(PA,PB)+' 日間）</p>';
+ return h+'</section>';
 }
 function st(l,v,u,c,s){return '<div class="stat"><div class="stat-l">'+esc(l)+'</div><div class="stat-v"'+(c?' style="color:'+c+'"':'')+'>'+v+'<em>'+u+'</em></div>'+(s?'<div class="stat-s">'+esc(s)+'</div>':'')+'</div>'}
 
@@ -371,11 +466,22 @@ function viewList(){
  h+='<section class="card"><div class="ch"><h2>トレーニング</h2><span class="tag">'+tr.length+' 件</span></div>'
   +(tr.length?tr.slice(0,80).map(function(r){return row(r.date,esc(r.exercise)+'　'+r.value+r.unit,'','training',r.id)}).join('')
    :'<div class="empty">まだ記録がありません。</div>')+'</section>';
+
+ var pd=phDates();
+ h+='<section class="card"><div class="ch"><h2>上半身の写真</h2><span class="tag">'+pd.length+' 日分</span></div>'
+  +(pd.length?pd.slice().reverse().map(function(d){
+    var vs=PH_VIEWS.filter(function(v){return PHK.indexOf(d+'_'+v[0])>=0}).map(function(v){return v[1]});
+    return row(d,vs.join(' ／ '),'','photo',d)}).join('')
+   :'<div class="empty">まだ写真がありません。</div>')+'</section>';
  return h;
 }
 function row(t,m,n,kind,id){return '<div class="row"><div class="rowb"><b>'+esc(t)+'</b><span class="mono">'+m+'</span>'
  +(n?'<span class="rown">'+esc(n)+'</span>':'')+'</div><button class="del" onclick="del(\''+kind+'\',\''+id+'\')">削除</button></div>'}
-function del(kind,id){if(!confirm('この記録を削除します。元に戻せません。'))return;
+function del(kind,id){
+ if(kind==='photo'){if(!confirm(id+' の写真をすべて削除します。元に戻せません。'))return;
+  var ks=PHK.filter(function(k){return k.slice(0,10)===id});
+  return Promise.all(ks.map(function(k){phForget(k);return phDel(k)})).then(phKeys).then(function(){render();toast('写真を削除しました。')})}
+ if(!confirm('この記録を削除します。元に戻せません。'))return;
  S[kind]=S[kind].filter(function(r){return r.id!==id});save();render();toast('削除しました。')}
 
 function dl(name,content,type){var b=new Blob([content],{type:type});var a=document.createElement('a');
@@ -391,13 +497,25 @@ function expCSV(){
  training().forEach(function(r){rows.push(['トレーニング',r.date,r.exercise,r.value+r.unit])});
  dl('body-log_'+today()+'.csv','\ufeff'+rows.map(function(r){return r.join(',')}).join('\n'),'text/csv');
  toast('CSV を書き出しました。');}
-function expJSON(){dl('body-log-backup_'+today()+'.json',JSON.stringify(S,null,1),'application/json');toast('バックアップを書き出しました。');}
+/* バックアップには写真も文字列（base64）にして含める */
+function expJSON(){
+ Promise.all(PHK.map(function(k){return phGet(k).then(function(b){return b?b2d(b).then(function(d){return{k:k,d:d}}):null})}))
+  .then(function(ps){var o=JSON.parse(JSON.stringify(S));o.photos=ps.filter(Boolean);
+   dl('body-log-backup_'+today()+'.json',JSON.stringify(o,null,1),'application/json');
+   toast('バックアップを書き出しました（写真 '+o.photos.length+' 枚を含む）。')})
+  .catch(function(){toast('写真の読み出しに失敗しました。もう一度お試しください。')});}
 function impJSON(el){var f=el.files[0];if(!f)return;var r=new FileReader();
  r.onload=function(){try{var o=JSON.parse(r.result);
   if(!o.inbody||!o.circ)throw 0;
-  if(!confirm('現在の記録を、読み込むファイルの内容で置き換えます。よろしいですか。'))return;
+  var ps=o.photos;delete o.photos;
+  if(!confirm('現在の記録を、読み込むファイルの内容で置き換えます。'+(ps?'写真も置き換わります。':'写真は今のまま残ります。')+'よろしいですか。'))return;
   S=o;S.exercises=S.exercises&&S.exercises.length?S.exercises:DEFAULT_EX;S.landmarks=S.landmarks||{arm:'',thigh:'',memo:''};
-  save();render();toast('バックアップを読み込みました。')}catch(e){toast('読み込めませんでした。このアプリで書き出したJSONファイルを選んでください。')}};
+  save();
+  (ps?phClear().then(function(){Object.keys(PHURL).forEach(phForget);
+    return Promise.all(ps.map(function(p){return d2b(p.d).then(function(b){return phPut(p.k,b)})}))}):Promise.resolve())
+   .then(phKeys).then(function(){render();toast('バックアップを読み込みました。')})
+   .catch(function(){render();toast('記録は読み込みましたが、写真の一部を読み込めませんでした。')});
+  }catch(e){toast('読み込めませんでした。このアプリで書き出したJSONファイルを選んでください。')}};
  r.readAsText(f);el.value='';}
 
 /* ============ 設定タブ ============ */
@@ -426,9 +544,15 @@ function viewSet(){
   +'<div><span>身長</span><b>'+HEIGHT_CM+' cm</b></div></div>'
   +'<p class="note">管理下限は 2026/08/21 の骨格筋量 31.3kg が基準です。減量を進めても、この値を割らないことが条件になります。</p></section>';
 
+ h+='<section class="card"><div class="ch"><h2>写真の形式</h2><span class="tag">HEICはChromeで開けません</span></div>'
+  +'<p class="note" style="margin:0">iPhoneの標準の写真形式（HEIC）は、このアプリでは読み込めません。次のどちらかでJPEGにしてください。<br>'
+  +'・iPhoneの「設定」→「カメラ」→「フォーマット」→「互換性優先」にしてから撮る（以後ずっとJPEGになります）<br>'
+  +'・Macで写真ファイルを右クリック →「クイックアクション」→「イメージを変換」→ 形式「JPEG」<br>'
+  +'取り込んだ写真は長辺 '+PH_MAX+'px に縮小して保存します（1枚あたり約0.1〜0.3MB）。</p></section>';
+
  h+='<section class="card"><div class="ch"><h2>データの保管場所</h2></div>'
-  +'<p class="note" style="margin:0">記録はこの端末の中だけに保存されます。サーバーには送信されません。'
-  +'端末の初期化やブラウザのデータ削除で消えるため、月1回、一覧タブからバックアップを書き出して保管してください。</p></section>';
+  +'<p class="note" style="margin:0">記録と写真はこの端末の中だけに保存されます。サーバーには送信されません。'
+  +'端末の初期化やブラウザのデータ削除で消えるため、月1回、一覧タブからバックアップを書き出して保管してください。バックアップファイルには写真も含まれます。</p></section>';
  return h;
 }
 
@@ -445,8 +569,10 @@ function render(){
  h+='<div class="pane">'+(TAB==='entry'?viewEntry():TAB==='trend'?viewTrend():TAB==='list'?viewList():viewSet())+'</div>';
  h+='<footer>計測値の記録・集計を行うツールです。診断や治療方針の判断には使用せず、担当医の指示を優先してください。</footer>';
  document.getElementById('app').innerHTML=h;
+ phFill();
 }
 load();render();
+phKeys().then(render).catch(function(){});
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
 if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(function(){});
 </script>

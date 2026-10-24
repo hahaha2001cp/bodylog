@@ -1,5 +1,5 @@
 /* BODY LOG — オフライン用キャッシュ */
-var CACHE = 'bodylog-v4';
+var CACHE = 'bodylog-v5';
 var ASSETS = ['./', './index.html', './manifest.webmanifest',
               './icon-180.png', './icon-192.png', './icon-512.png'];
 

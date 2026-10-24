@@ -61,7 +61,7 @@ git push -u origin main
 
 ## 更新したとき
 
-ファイルを差し替えたら `sw.js` の 2行目 `var CACHE = 'bodylog-v3';` の
+ファイルを差し替えたら `sw.js` の 2行目 `var CACHE = 'bodylog-v5';` の
 番号を上げてください（v4, v5…）。これを忘れると古い画面が残り続けます。
 
 ## バックアップ
